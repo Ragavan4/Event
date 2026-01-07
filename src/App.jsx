@@ -27,6 +27,7 @@ import {
   update,
   remove,
 } from "firebase/database";
+import { getAnalytics } from "firebase/analytics";
 
 // 🔥 Firebase configuration (YOUR REAL PROJECT)
 const firebaseConfig = {
@@ -41,6 +42,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const analytics = getAnalytics(app);
 
 export default function App() {
   const [name, setName] = useState("");
