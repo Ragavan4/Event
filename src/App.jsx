@@ -17,25 +17,48 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue, set } from "firebase/database";
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 export default function App() {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [data, setData] = useState([]);
 
+  // Load data from Firebase on mount
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("friends")) || [];
-    setData(saved);
+    const friendsRef = ref(db, "friends");
+    onValue(friendsRef, (snapshot) => {
+      const val = snapshot.val();
+      setData(val ? Object.values(val) : []);
+    });
   }, []);
 
+  // Save data to Firebase
   const saveData = (newData) => {
-    setData(newData);
-    localStorage.setItem("friends", JSON.stringify(newData));
+    set(ref(db, "friends"), newData);
   };
 
   const addFriend = () => {
     if (!name.trim() || !amount) return;
     const newFriend = { name: name.trim(), amount: Number(amount) };
-    saveData([...data, newFriend]);
+    const newData = [...data, newFriend];
+    saveData(newData);
     setName("");
     setAmount("");
   };
@@ -65,34 +88,32 @@ export default function App() {
       }}
     >
       <Container maxWidth="sm">
-        {/* Paper Card */}
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-            borderRadius: 2,
-            
-          }}
-        >
+        <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
           <Typography
-            variant="h5"
-            fontWeight="bold"
-            gutterBottom
-            align="center"
-            sx={{ color: "#1f3a0d" }}
-          >
-            Event Expense 
-          </Typography>
+  variant="h5"
+  fontWeight="bold"
+  gutterBottom
+  align="center"
+  fontFamily={"serif"}
+  sx={{ color: "#2b680fff" }}
+>
+  RK Brothers - Pongal (2026)
+</Typography>
 
-          {/* Add Friend Form */}
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            mb={2}
-          >
+<Typography
+  variant="body2"
+  align="center"
+  fontFamily={"monospace"}
+  sx={{ color: "#b5b6b271", marginTop: "-6px" }}
+>
+  Developed by - Ragavan
+</Typography>
+
+
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} mb={2} mt={2}>
             <TextField
               size="small"
-              label="Friend Name"
+              label="Name"
               fullWidth
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -108,27 +129,22 @@ export default function App() {
             <Button
               variant="contained"
               onClick={addFriend}
-              sx={{ minWidth: 80 ,  background: "linear-gradient(135deg, #1f3a0d, #80c582)",}}
+              sx={{
+                minWidth: 80,
+                background: "linear-gradient(135deg, #1f3a0d, #80c582)",
+              }}
             >
               Add
             </Button>
           </Stack>
 
-          {/* Expense Table */}
           <TableContainer component={Paper} variant="outlined">
             <Table stickyHeader size="small">
-              <TableHead backgroundColor="red" >
-                <TableRow sx={{ backgroundColor: "#dbe6db27", color: "#fff" }}>
-                  <TableCell sx={{ color: "#000000ff", fontWeight: "bold" }}>
-                    Friend
-                  </TableCell>
-                  <TableCell sx={{ color: "#000000ff", fontWeight: "bold" }}>
-                    Amount
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ color: "#000000ff", fontWeight: "bold" }}
-                  >
+              <TableHead>
+                <TableRow sx={{ backgroundColor: "#dbe6db27" }}>
+                  <TableCell sx={{ fontWeight: "bold" }}>Friend</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Amount</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Action
                   </TableCell>
                 </TableRow>
@@ -138,7 +154,7 @@ export default function App() {
                   <TableRow
                     key={index}
                     sx={{
-                      backgroundColor:"#f5f0f01e",
+                      backgroundColor: "#f5f0f01e",
                       "&:hover": { backgroundColor: "#f3e9f357" },
                     }}
                   >
@@ -147,9 +163,7 @@ export default function App() {
                         variant="standard"
                         size="small"
                         value={row.name}
-                        onChange={(e) =>
-                          update(index, "name", e.target.value)
-                        }
+                        onChange={(e) => update(index, "name", e.target.value)}
                         fullWidth
                       />
                     </TableCell>
@@ -180,7 +194,6 @@ export default function App() {
             </Table>
           </TableContainer>
 
-          {/* Total */}
           <Typography
             variant="subtitle1"
             align="right"
