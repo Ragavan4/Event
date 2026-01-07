@@ -18,20 +18,27 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, set } from "firebase/database";
+import {
+  getDatabase,
+  ref,
+  onValue,
+  push,
+  set,
+  update,
+  remove,
+} from "firebase/database";
 
-// Firebase configuration
+// 🔥 Firebase configuration (YOUR REAL PROJECT)
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyB_aaVj4sj67dDPGwTpw9d4dQid4IOClFw",
+  authDomain: "event-4d869.firebaseapp.com",
+  databaseURL: "https://event-4d869-default-rtdb.firebaseio.com",
+  projectId: "event-4d869",
+  storageBucket: "event-4d869.firebasestorage.app",
+  messagingSenderId: "593013677800",
+  appId: "1:593013677800:web:9abecdc378c9c7d0a7735d",
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -40,37 +47,48 @@ export default function App() {
   const [amount, setAmount] = useState("");
   const [data, setData] = useState([]);
 
-  // Load data from Firebase on mount
+  // ✅ READ DATA (REAL-TIME + REFRESH SAFE)
   useEffect(() => {
     const friendsRef = ref(db, "friends");
-    onValue(friendsRef, (snapshot) => {
-      const val = snapshot.val();
-      setData(val ? Object.values(val) : []);
+
+    return onValue(friendsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const obj = snapshot.val();
+        const arr = Object.keys(obj).map((id) => ({
+          id,
+          ...obj[id],
+        }));
+        setData(arr);
+      } else {
+        setData([]);
+      }
     });
   }, []);
 
-  // Save data to Firebase
-  const saveData = (newData) => {
-    set(ref(db, "friends"), newData);
-  };
-
+  // ✅ ADD (permanent save)
   const addFriend = () => {
     if (!name.trim() || !amount) return;
-    const newFriend = { name: name.trim(), amount: Number(amount) };
-    const newData = [...data, newFriend];
-    saveData(newData);
+
+    const newRef = push(ref(db, "friends"));
+    set(newRef, {
+      name: name.trim(),
+      amount: Number(amount),
+    });
+
     setName("");
     setAmount("");
   };
 
-  const update = (index, key, value) => {
-    const newData = [...data];
-    newData[index][key] = key === "amount" ? Number(value) || 0 : value;
-    saveData(newData);
+  // ✅ UPDATE (instant sync)
+  const updateRow = (id, key, value) => {
+    update(ref(db, `friends/${id}`), {
+      [key]: key === "amount" ? Number(value) || 0 : value,
+    });
   };
 
-  const remove = (index) => {
-    saveData(data.filter((_, i) => i !== index));
+  // ✅ DELETE
+  const removeRow = (id) => {
+    remove(ref(db, `friends/${id}`));
   };
 
   const total = data.reduce((sum, f) => sum + f.amount, 0);
@@ -83,34 +101,33 @@ export default function App() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        padding: 2,
+        p: 2,
         background: "linear-gradient(135deg, #1f3a0d, #80c582)",
       }}
     >
       <Container maxWidth="sm">
         <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
           <Typography
-  variant="h5"
-  fontWeight="bold"
-  gutterBottom
-  align="center"
-  fontFamily={"serif"}
-  sx={{ color: "#2b680fff" }}
->
-  RK Brothers - Pongal (2026)
-</Typography>
+            variant="h5"
+            fontWeight="bold"
+            align="center"
+            gutterBottom
+            fontFamily={"ui-sans-serif"}
+            sx={{ color: "#2b680f" }}
+          >
+            RK Brothers – Pongal (2026)
+          </Typography>
 
-<Typography
-  variant="body2"
-  align="center"
-  fontFamily={"monospace"}
-  sx={{ color: "#b5b6b271", marginTop: "-6px" }}
->
-  Developed by - Ragavan
-</Typography>
+          <Typography
+            variant="body2"
+            align="center"
+            fontFamily={"monospace"}
+            sx={{ color: "#d4d3d379", mb: 2 }}
+          >
+            Developed by – Ragavan
+          </Typography>
 
-
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} mb={2} mt={2}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} mb={2}>
             <TextField
               size="small"
               label="Name"
@@ -139,9 +156,9 @@ export default function App() {
           </Stack>
 
           <TableContainer component={Paper} variant="outlined">
-            <Table stickyHeader size="small">
+            <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: "#dbe6db27" }}>
+                <TableRow>
                   <TableCell sx={{ fontWeight: "bold" }}>Friend</TableCell>
                   <TableCell sx={{ fontWeight: "bold" }}>Amount</TableCell>
                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
@@ -150,31 +167,25 @@ export default function App() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.map((row, index) => (
-                  <TableRow
-                    key={index}
-                    sx={{
-                      backgroundColor: "#f5f0f01e",
-                      "&:hover": { backgroundColor: "#f3e9f357" },
-                    }}
-                  >
+                {data.map((row) => (
+                  <TableRow key={row.id}>
                     <TableCell>
                       <TextField
                         variant="standard"
-                        size="small"
                         value={row.name}
-                        onChange={(e) => update(index, "name", e.target.value)}
+                        onChange={(e) =>
+                          updateRow(row.id, "name", e.target.value)
+                        }
                         fullWidth
                       />
                     </TableCell>
                     <TableCell>
                       <TextField
                         variant="standard"
-                        size="small"
                         type="number"
                         value={row.amount}
                         onChange={(e) =>
-                          update(index, "amount", e.target.value)
+                          updateRow(row.id, "amount", e.target.value)
                         }
                         fullWidth
                       />
@@ -183,7 +194,7 @@ export default function App() {
                       <IconButton
                         color="error"
                         size="small"
-                        onClick={() => remove(index)}
+                        onClick={() => removeRow(row.id)}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
