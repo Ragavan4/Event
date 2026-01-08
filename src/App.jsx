@@ -14,8 +14,15 @@ import {
   IconButton,
   Stack,
   Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
+import { Autocomplete } from "@mui/material";
+
 import DeleteIcon from "@mui/icons-material/Delete";
+import "./App.css";
 
 import { initializeApp } from "firebase/app";
 import {
@@ -29,7 +36,6 @@ import {
 } from "firebase/database";
 import { getAnalytics } from "firebase/analytics";
 
-// 🔥 Firebase configuration (YOUR REAL PROJECT)
 const firebaseConfig = {
   apiKey: "AIzaSyB_aaVj4sj67dDPGwTpw9d4dQid4IOClFw",
   authDomain: "event-4d869.firebaseapp.com",
@@ -48,8 +54,9 @@ export default function App() {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [data, setData] = useState([]);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteName, setDeleteName] = useState("");
 
-  // ✅ READ DATA (REAL-TIME + REFRESH SAFE)
   useEffect(() => {
     const friendsRef = ref(db, "friends");
 
@@ -67,7 +74,6 @@ export default function App() {
     });
   }, []);
 
-  // ✅ ADD (permanent save)
   const addFriend = () => {
     if (!name.trim() || !amount) return;
 
@@ -81,19 +87,26 @@ export default function App() {
     setAmount("");
   };
 
-  // ✅ UPDATE (instant sync)
   const updateRow = (id, key, value) => {
     update(ref(db, `friends/${id}`), {
       [key]: key === "amount" ? Number(value) || 0 : value,
     });
   };
 
-  // ✅ DELETE
   const removeRow = (id) => {
     remove(ref(db, `friends/${id}`));
   };
 
   const total = data.reduce((sum, f) => sum + f.amount, 0);
+  const nameTotals = data.reduce((acc, curr) => {
+    const key = curr.name?.trim();
+    if (!key) return acc;
+
+    acc[key] = (acc[key] || 0) + curr.amount;
+    return acc;
+  }, {});
+
+  const nameOptions = [...new Set(data.map((d) => d.name))];
 
   return (
     <Box
@@ -104,20 +117,20 @@ export default function App() {
         justifyContent: "center",
         alignItems: "center",
         p: 2,
-        background: "linear-gradient(135deg, #1f3a0d, #80c582)",
+        background: "linear-gradient(135deg, #0d1f3aff, #80c582)",
       }}
     >
       <Container maxWidth="sm">
-        <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
           <Typography
             variant="h5"
             fontWeight="bold"
             align="center"
             gutterBottom
-            fontFamily={"ui-sans-serif"}
-            sx={{ color: "#2b680f" }}
+            fontFamily={"emoji"}
+            sx={{ color: "#850000ff" }}
           >
-            RK Brothers – Pongal (2026)
+            Room Grocery Payment Details
           </Typography>
 
           <Typography
@@ -130,13 +143,17 @@ export default function App() {
           </Typography>
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} mb={2}>
-            <TextField
-              size="small"
-              label="Name"
+            <Autocomplete
+              freeSolo
               fullWidth
+              options={nameOptions}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onInputChange={(event, newValue) => setName(newValue)}
+              renderInput={(params) => (
+                <TextField {...params} size="small" label="Name" fullWidth />
+              )}
             />
+
             <TextField
               size="small"
               label="Amount"
@@ -150,7 +167,7 @@ export default function App() {
               onClick={addFriend}
               sx={{
                 minWidth: 80,
-                background: "linear-gradient(135deg, #1f3a0d, #80c582)",
+                background: "linear-gradient(135deg, #2d302bff, #80c582)",
               }}
             >
               Add
@@ -161,7 +178,7 @@ export default function App() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: "bold" }}>Friend</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Name</TableCell>
                   <TableCell sx={{ fontWeight: "bold" }}>Amount</TableCell>
                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Action
@@ -196,7 +213,10 @@ export default function App() {
                       <IconButton
                         color="error"
                         size="small"
-                        onClick={() => removeRow(row.id)}
+                        onClick={() => {
+                          setDeleteId(row.id);
+                          setDeleteName(row.name);
+                        }}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -215,7 +235,50 @@ export default function App() {
           >
             Total: ₹ {total}
           </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Typography fontWeight="bold" sx={{ color: "#1f3a0d", mb: 1 }}>
+              Name-wise Total
+            </Typography>
+
+            {Object.entries(nameTotals).map(([name, amount]) => (
+              <Stack
+                key={name}
+                direction="row"
+                justifyContent="space-between"
+                sx={{ mb: 0.5 }}
+              >
+                <Typography variant="body2">{name}</Typography>
+                <Typography variant="body2" fontWeight="bold">
+                  ₹ {amount}
+                </Typography>
+              </Stack>
+            ))}
+          </Box>
         </Paper>
+        <Dialog open={Boolean(deleteId)} onClose={() => setDeleteId(null)}>
+          <DialogTitle>Confirm Delete</DialogTitle>
+
+          <DialogContent>
+            <Typography>
+              Are you sure you want to delete <b>{deleteName}</b>?
+            </Typography>
+          </DialogContent>
+
+          <DialogActions>
+            <Button onClick={() => setDeleteId(null)}>Cancel</Button>
+
+            <Button
+              color="error"
+              variant="contained"
+              onClick={() => {
+                removeRow(deleteId);
+                setDeleteId(null);
+              }}
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </Box>
   );
